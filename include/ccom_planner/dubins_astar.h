@@ -8,7 +8,7 @@
 #include <project11_navigation/context.h>
 #include <project11_navigation/environment.h>
 #include "project11/utils.h"
-#include "project11_nav_msgs/RobotState.h"
+#include "project11_nav_msgs/msg/robot_state.hpp"
 
 extern "C" {
 #include "dubins_curves/dubins.h"
@@ -27,11 +27,11 @@ namespace ccom_planner
 // and cost components (g, h)
 struct Node
 {
-  Node(const project11_nav_msgs::RobotState& s, double heuristic, double distance_so_far = 0.0, double cost_so_far = 0.0, std::shared_ptr<Node> from = std::shared_ptr<Node>()): state(s), cummulative_distance(distance_so_far), h(heuristic), g(cost_so_far), previous_node(from)
+  Node(const project11_nav_msgs::msg::RobotState& s, double heuristic, double distance_so_far = 0.0, double cost_so_far = 0.0, std::shared_ptr<Node> from = std::shared_ptr<Node>()): state(s), cummulative_distance(distance_so_far), h(heuristic), g(cost_so_far), previous_node(from)
   {
   }
 
-  project11_nav_msgs::RobotState state;
+  project11_nav_msgs::msg::RobotState state;
   double cummulative_distance; // distance of path from start
   double g; // cost of path from start
   double h; // heuristic estimate of cost to goal
@@ -104,12 +104,12 @@ struct NodeIndex
 };
 
 // Converts a chain of Nodes into PoseStampeds
-void unwrap(Node::Ptr plan, std::vector<geometry_msgs::PoseStamped> &poses, const std_msgs::Header& start_header);
+void unwrap(Node::Ptr plan, std::vector<geometry_msgs::msg::PoseStamped> &poses, const std_msgs::msg::Header& start_header);
 
 class DubinsAStar
 {
 public:
-  DubinsAStar(project11_nav_msgs::RobotState start, project11_nav_msgs::RobotState goal, project11_navigation::Context::Ptr context);
+  DubinsAStar(project11_nav_msgs::msg::RobotState start, project11_nav_msgs::msg::RobotState goal, project11_navigation::Context::Ptr context, double turn_radius, double speed);
   ~DubinsAStar();
 
   // If planner is done, return true
@@ -117,26 +117,26 @@ public:
   // If a plan was not found the plan argument is not updated.
   // If the planner is not done, return false and populate the plan argument
   // with the best candidate so far.
-  bool getPlan(std::vector<geometry_msgs::PoseStamped> &plan, const std_msgs::Header& start_header);
+  bool getPlan(std::vector<geometry_msgs::msg::PoseStamped> &plan, const std_msgs::msg::Header& start_header);
 private:
   // Execute the search, returning the last node if a plan was found.
   Node::Ptr plan();
 
   // Turn a state in continuous space to something we can use in a grid
-  NodeIndex indexOf(const project11_nav_msgs::RobotState& state) const;
+  NodeIndex indexOf(const project11_nav_msgs::msg::RobotState& state) const;
 
   // Calculates the Dubins path between states. Returns true is succesful.
-  bool dubins(const project11_nav_msgs::RobotState & from, const project11_nav_msgs::RobotState & to, DubinsPath & path) const;
+  bool dubins(const project11_nav_msgs::msg::RobotState & from, const project11_nav_msgs::msg::RobotState & to, DubinsPath & path) const;
 
   // Estimate the cost between states
-  double heuristic(const project11_nav_msgs::RobotState & from, const project11_nav_msgs::RobotState & to) const;
+  double heuristic(const project11_nav_msgs::msg::RobotState & from, const project11_nav_msgs::msg::RobotState & to) const;
 
   // Generates potential next states from a given state.
   std::vector<Node::Ptr> generateNeighbors(Node::Ptr from) const;
 
   // Returns a cost from 0.0 to 1.0 if a state not blocked and on
   // the costmap. Returns -1.0 if blocked or off the map
-  double getCost(const project11_nav_msgs::RobotState& to_state, const project11_nav_msgs::RobotState& from_state);
+  double getCost(const project11_nav_msgs::msg::RobotState& to_state, const project11_nav_msgs::msg::RobotState& from_state);
 
   // Returns true if i is one of the goal indecies
   bool isGoal(const NodeIndex& i) const;
@@ -181,8 +181,8 @@ private:
   // Visited node, to avoid looping and retracing paths
   std::map<NodeIndex, bool> visited_nodes_;
 
-  project11_nav_msgs::RobotState start_;
-  std::vector<project11_nav_msgs::RobotState> goals_;
+  project11_nav_msgs::msg::RobotState start_;
+  std::vector<project11_nav_msgs::msg::RobotState> goals_;
   std::vector<NodeIndex> goal_indexes_;
 
   std::future<Node::Ptr> plan_ready_;

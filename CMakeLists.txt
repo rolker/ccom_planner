@@ -1,52 +1,57 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.14.4)
 project(ccom_planner)
 
-set(CMAKE_CXX_STANDARD 17)
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
 
-find_package(catkin REQUIRED COMPONENTS
+
+find_package(ament_cmake REQUIRED)
+find_package(behaviortree_cpp REQUIRED)
+find_package(dubins_curves REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(project11_navigation REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(tf2 REQUIRED)
+
+
+set(dependencies
   behaviortree_cpp
   dubins_curves
+  geometry_msgs
   project11_navigation
-  pluginlib
-  roscpp
+  rclcpp
   tf2
 )
 
-catkin_package(
-  LIBRARIES ccom_planner_bt_plugin
-  CATKIN_DEPENDS behaviortree_cpp dubins_curves pluginlib project11_navigation roscpp tf2
-)
-
-include_directories(
-  include
-  ${catkin_INCLUDE_DIRS}
-)
-
-
-set(PLUGIN_SOURCES
+add_library(ccom_planner_bt_plugin SHARED
   src/dubins_astar.cpp
   src/plan_action.cpp
 )
 
-add_library(ccom_planner_bt_plugin SHARED ${PLUGIN_SOURCES})
-target_link_libraries(ccom_planner_bt_plugin PRIVATE ${BTCPP_LIBRARY}
-    ${catkin_LIBRARIES}
-    #project11_navigation
-)
+target_include_directories(ccom_planner_bt_plugin
+  PUBLIC
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+    "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
+
+ament_target_dependencies(ccom_planner_bt_plugin ${dependencies})
 
 target_compile_definitions(ccom_planner_bt_plugin PRIVATE  BT_PLUGIN_EXPORT )
 
 install(TARGETS ccom_planner_bt_plugin
-    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-    RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
-    )
-
-install(DIRECTORY include/${PROJECT_NAME}/
-DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-PATTERN ".svn" EXCLUDE
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
 )
 
-install(FILES plugin.xml
- DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+install(DIRECTORY include/
+  DESTINATION include/
 )
+
+ament_export_include_directories(include)
+ament_export_libraries(ccom_planner_bt_plugin)
+ament_export_dependencies(${dependencies})
+ament_package()

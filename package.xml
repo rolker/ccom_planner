@@ -8,16 +8,15 @@
 
   <license>BSD</license>
 
-  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>ament_cmake_ros</buildtool_depend>
   <depend>behaviortree_cpp</depend>
   <depend>dubins_curves</depend>
-  <depend>pluginlib</depend>
+  <depend>geometry_msgs</depend>
   <depend>project11_navigation</depend>
-  <depend>roscpp</depend>
+  <depend>rclcpp</depend>
   <depend>tf2</depend>
   
   <export>
-    <project11_navigation plugin="${prefix}/plugin.xml" />
-    <behaviortree_cpp bt_lib_plugin="libccom_planner_bt_plugin"/>
+    <build_type>ament_cmake</build_type>
   </export>
 </package>

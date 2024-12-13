@@ -2,6 +2,7 @@
 #define CCOM_PLANNER_PLAN_ACTION_H
 
 #include <behaviortree_cpp/bt_factory.h>
+#include "rclcpp/rclcpp.hpp"
 
 namespace ccom_planner
 {
@@ -23,6 +24,7 @@ public:
 
 
 private:
+  rclcpp::Node::SharedPtr node_;
   std::shared_ptr<DubinsAStar> planner_;
 
 };

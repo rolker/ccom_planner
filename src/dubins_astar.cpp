@@ -1,26 +1,22 @@
 #include <ccom_planner/dubins_astar.h>
 #include <tf2/utils.h>
 #include <project11_navigation/robot_capabilities.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 namespace ccom_planner
 {
 
-DubinsAStar::DubinsAStar(project11_nav_msgs::RobotState start, project11_nav_msgs::RobotState goal, project11_navigation::Context::Ptr context)
+DubinsAStar::DubinsAStar(project11_nav_msgs::msg::RobotState start, project11_nav_msgs::msg::RobotState goal, project11_navigation::Context::Ptr context, double turn_radius, double speed):
+  turn_radius_(turn_radius),
+  speed_(speed)
 {
   environment_snapshot_ = context->environment().snapshot();
-
-  //step_size_ = environment_snapshot_.static_grids_by_resolution.begin()->first;
- 
-  ros::NodeHandle nh("~");
-  project11_navigation::RobotCapabilities caps(nh);
-  turn_radius_ = caps.getTurnRadiusAtSpeed(caps.default_velocity.linear.x);
 
   step_size_ = turn_radius_/2.0;
 
   double max_yaw_step = 0.5*step_size_/turn_radius_;
 
   yaw_step_ = max_yaw_step;
-
 
   search_steps_.push_back(SearchStep(0.0, step_size_));
   for(double yaw = yaw_step_; yaw < M_PI; yaw += yaw_step_)
@@ -34,11 +30,6 @@ DubinsAStar::DubinsAStar(project11_nav_msgs::RobotState start, project11_nav_msg
     search_steps_.push_back(SearchStep(yaw, step_size_));
     search_steps_.push_back(SearchStep(-yaw, step_size_));
   }
-
-  ROS_DEBUG_STREAM("Step size:" << step_size_ << " turn radius: " << turn_radius_ << " max yaw step: " << max_yaw_step << " search step count: " << search_steps_.size());
-
-
-  speed_ = caps.default_velocity.linear.x;
 
   start_ = start;
 
@@ -96,7 +87,7 @@ bool DubinsAStar::isGoal(const NodeIndex& i) const
   return false;
 }
 
-bool DubinsAStar::getPlan(std::vector<geometry_msgs::PoseStamped> &plan, const std_msgs::Header& start_header)
+bool DubinsAStar::getPlan(std::vector<geometry_msgs::msg::PoseStamped> &plan, const std_msgs::msg::Header& start_header)
 {
   if(!plan_)
   {
@@ -216,7 +207,7 @@ Node::Ptr DubinsAStar::plan()
   return Node::Ptr();
 }
 
-NodeIndex DubinsAStar::indexOf(const project11_nav_msgs::RobotState& state) const
+NodeIndex DubinsAStar::indexOf(const project11_nav_msgs::msg::RobotState& state) const
 {
   NodeIndex ret;
   ret.xi = state.pose.position.x/step_size_;
@@ -226,7 +217,7 @@ NodeIndex DubinsAStar::indexOf(const project11_nav_msgs::RobotState& state) cons
   return ret;
 }
 
-bool DubinsAStar::dubins(const project11_nav_msgs::RobotState & from, const project11_nav_msgs::RobotState & to, DubinsPath & path) const
+bool DubinsAStar::dubins(const project11_nav_msgs::msg::RobotState & from, const project11_nav_msgs::msg::RobotState & to, DubinsPath & path) const
 {
   double start[3];
   start[0] = from.pose.position.x;
@@ -243,20 +234,20 @@ bool DubinsAStar::dubins(const project11_nav_msgs::RobotState & from, const proj
   return dubins_ret == 0;
 }
 
-double DubinsAStar::heuristic(const project11_nav_msgs::RobotState & from, const project11_nav_msgs::RobotState & to) const
+double DubinsAStar::heuristic(const project11_nav_msgs::msg::RobotState & from, const project11_nav_msgs::msg::RobotState & to) const
 {
   DubinsPath path;
 
   if(dubins(from, to, path))  
     return dubins_path_length(&path)/speed_;
 
-  ROS_WARN_STREAM("Dubins path not found");
+  //ROS_WARN_STREAM("Dubins path not found");
   return -1;
 }
 
 std::vector<Node::Ptr> DubinsAStar::generateNeighbors(Node::Ptr from) const
 {
-  std::vector<project11_nav_msgs::RobotState> states;
+  std::vector<project11_nav_msgs::msg::RobotState> states;
 
   // First, let's sample from a direct Dubins path if we can.
   DubinsPath path;
@@ -271,7 +262,7 @@ std::vector<Node::Ptr> DubinsAStar::generateNeighbors(Node::Ptr from) const
       double distance = step_size_;
       if(dubins_path_sample(&path, distance, q) == 0)
       {
-        project11_nav_msgs::RobotState state;
+        project11_nav_msgs::msg::RobotState state;
         state.pose.position.x = q[0];
         state.pose.position.y = q[1];
         tf2::Quaternion quat;
@@ -290,7 +281,7 @@ std::vector<Node::Ptr> DubinsAStar::generateNeighbors(Node::Ptr from) const
   // Now consider our standard directions
   for(auto step: search_steps_)
   {
-    project11_nav_msgs::RobotState state;
+    project11_nav_msgs::msg::RobotState state;
     tf2::Quaternion quat;
     quat.setRPY(0, 0, yaw+step.delta_yaw);
     state.pose.orientation = tf2::toMsg(quat);
@@ -318,16 +309,16 @@ std::vector<Node::Ptr> DubinsAStar::generateNeighbors(Node::Ptr from) const
   return ret;
 }
 
-double DubinsAStar::getCost(const project11_nav_msgs::RobotState& to_state, const project11_nav_msgs::RobotState& from_state)
+double DubinsAStar::getCost(const project11_nav_msgs::msg::RobotState& to_state, const project11_nav_msgs::msg::RobotState& from_state)
 {
   return environment_snapshot_.getCost(to_state, from_state, turn_radius_);
 }
 
-void unwrap(Node::Ptr plan, std::vector<geometry_msgs::PoseStamped> &poses, const std_msgs::Header& start_header)
+void unwrap(Node::Ptr plan, std::vector<geometry_msgs::msg::PoseStamped> &poses, const std_msgs::msg::Header& start_header)
 
 {
   // Reverse the order of the states
-  std::deque<project11_nav_msgs::RobotState> states;
+  std::deque<project11_nav_msgs::msg::RobotState> states;
   while(plan)
   {
     states.push_front(plan->state);
@@ -335,10 +326,10 @@ void unwrap(Node::Ptr plan, std::vector<geometry_msgs::PoseStamped> &poses, cons
   }
 
   double last_speed = 0.0;
-  ros::Duration cumulative_time(0.0);
+  auto cumulative_time = rclcpp::Duration::from_seconds(0.0);
   for(auto s: states)
   {
-    geometry_msgs::PoseStamped p;
+    geometry_msgs::msg::PoseStamped p;
     p.header = start_header;
     p.pose = s.pose;
 
@@ -348,7 +339,7 @@ void unwrap(Node::Ptr plan, std::vector<geometry_msgs::PoseStamped> &poses, cons
       auto avg_speed = std::max(0.1,(last_speed + s.twist.linear.x)/2.0);
       auto dx = s.pose.position.x - poses.back().pose.position.x;
       auto dy = s.pose.position.y - poses.back().pose.position.y;
-      cumulative_time += ros::Duration(sqrt(dx*dx+dy*dy)/avg_speed);
+      cumulative_time += rclcpp::Duration::from_seconds(sqrt(dx*dx+dy*dy)/avg_speed);
       p.header.stamp = start_header.stamp + cumulative_time;
       last_speed = s.twist.linear.x;
     }
