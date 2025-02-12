@@ -24,13 +24,13 @@ PlanAction::PlanAction(const std::string& name, const BT::NodeConfig& config):
 BT::PortsList PlanAction::providedPorts()
 {
   return {
-    BT::InputPort<geometry_msgs::msg::PoseStamped>("start_pose"),
-    BT::InputPort<geometry_msgs::msg::PoseStamped>("goal_pose"),
-    BT::OutputPort<std::shared_ptr<std::vector<geometry_msgs::msg::PoseStamped> > >("navigation_path"),
+    BT::InputPort<geometry_msgs::msg::PoseStamped>("start_pose", "{start_pose}", "Robot starting position and orientation"),
+    BT::InputPort<geometry_msgs::msg::PoseStamped>("goal_pose", "{goal_pose}", "Robot goal position and orientation"),
+    BT::OutputPort<std::shared_ptr<std::vector<geometry_msgs::msg::PoseStamped> > >("navigation_path", "{navigation_path}", "Planned path to follow"),
     BT::InputPort<double>("turn_radius", "{robot_turn_radius}", ""),
     BT::InputPort<double>("speed", "{robot_default_speed}", ""),
-    BT::InputPort<std::shared_ptr<tf2_ros::Buffer> >("tf_buffer"),
-    BT::InputPort<std::shared_ptr<project11_navigation::Context> >("context")
+    BT::InputPort<std::shared_ptr<tf2_ros::Buffer> >("tf_buffer", "{tf_buffer}", "Transform buffer"),
+    BT::InputPort<std::shared_ptr<project11_navigation::Context> >("context", "{context}", "Navigation context")
   };
 }
 
